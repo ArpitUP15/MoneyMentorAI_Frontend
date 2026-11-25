@@ -1,138 +1,262 @@
-import React, { useState, useRef, useEffect } from 'react';
-import './Chatbot.css'; 
+import { useEffect, useRef, useState } from 'react';
+import './Chatbot.css';
 
-const Chatbot = () => {
+const QUICK_PROMPTS = [
+  'How do I build a budget?',
+  'What is compound interest?',
+  'How does diversification work?',
+];
+
+function getFinancialReply(question) {
+  const text = question.toLowerCase();
+
+  if (/^\s*(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(text)) {
+    return 'Hi! I can explain budgeting, saving, investing basics, and common financial terms. What would you like to know?';
+  }
+
+  if (/\b(budget|budgeting|spending|expenses)\b/.test(text)) {
+    return 'Start by listing your monthly take-home income and essential expenses, then set limits for flexible spending and savings. A common starting point is the 50/30/20 guideline, but adjust it to fit your costs and goals.';
+  }
+
+  if (/\b(emergency fund|rainy day)\b/.test(text)) {
+    return 'An emergency fund is money set aside for unexpected costs. Many people work toward three to six months of essential expenses, building it gradually in an accessible, low-risk account.';
+  }
+
+  if (/\b(compound interest|compounding)\b/.test(text)) {
+    return 'Compound growth means returns can earn returns over time. The effect depends on how much you contribute, the rate of return, fees, and time; investment returns are not guaranteed.';
+  }
+
+  if (/\b(diversif|asset allocation|portfolio|risk)\b/.test(text)) {
+    return 'Diversification spreads investments across different assets so one holding has less influence on the overall portfolio. It can reduce some risks, but it cannot prevent losses. The right mix depends on your goals and time horizon.';
+  }
+
+  if (/\b(sip|mutual fund|index fund|etf)\b/.test(text)) {
+    return 'A fund pools money to invest in a group of assets. An SIP is a way to invest a fixed amount at regular intervals. Compare fees, holdings, risks, and the fund documents; neither regular investing nor diversification guarantees a profit.';
+  }
+
+  if (/\b(credit card|credit score|debt|loan|interest rate)\b/.test(text)) {
+    return 'Review the interest rate, fees, minimum payment, and total repayment cost. For multiple debts, keep required payments current and consider directing extra payments toward the highest-rate balance, while keeping enough cash for essential expenses.';
+  }
+
+  if (/\b(retirement|pension)\b/.test(text)) {
+    return 'Retirement planning usually starts with an estimated target date and expenses, then considers regular saving, investment risk, fees, and applicable local tax rules. A qualified adviser can help with your personal circumstances.';
+  }
+
+  if (/\b(crypto|cryptocurrency|bitcoin|ethereum)\b/.test(text)) {
+    return 'Crypto assets can be highly volatile and may lose substantial value. Before considering them, understand custody, fees, fraud risks, and local regulations, and avoid investing money you cannot afford to lose.';
+  }
+
+  if (/\b(price|quote|live market|stock price|share price)\b/.test(text)) {
+    return 'I can explain market terms, but I do not have live price data in this chat. Check the dashboard or your broker for current quotes and verify the market and timestamp.';
+  }
+
+  if (/\b(inflat|saving|save money|savings)\b/.test(text)) {
+    return 'A practical first step is to set a specific savings goal, automate a manageable contribution, and keep short-term funds accessible. Consider how inflation, account fees, and withdrawal rules affect the goal.';
+  }
+
+  if (/\b(invest|stock|share|market)\b/.test(text)) {
+    return 'I can help with investing concepts, but I cannot choose investments for you. Start by clarifying your goal and time horizon, understanding the risks and fees, and comparing diversified options rather than relying on a single stock tip.';
+  }
+
+  return 'I can help explain budgeting, saving, debt, investing basics, diversification, and financial terms. Ask a specific question and I’ll give you an educational overview. I can’t provide personalized financial advice or live market data.';
+}
+
+function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'bot', text: 'Hey there 👋 \nHow can I help you today?' }
+    {
+      role: 'assistant',
+      text: 'Hi! I’m your MoneyMentor guide. Ask me about budgeting, saving, or investing basics.',
+    },
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  
-
+  const toggleButtonRef = useRef(null);
+  const inputRef = useRef(null);
   const chatBodyRef = useRef(null);
 
-
-  const toggleChatbot = () => {
-    setIsOpen(!isOpen);
-  };
-
+  useEffect(() => {
+    if (isOpen) {
+      inputRef.current?.focus();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (chatBodyRef.current) {
       chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
     }
-  }, [messages, isOpen, isThinking]);
+  }, [messages, isThinking]);
 
- 
-  const isMentalHealthQuery = (msg) => {
-    const allowedKeywords = ["money","stock","SIP","finance","investment","savings","budgeting","inflation","deflation","interest rates","economic growth","personal finance","financial literacy","capital market","stock market","bond market","mutual funds","exchange-traded funds","portfolio management","risk management","asset allocation","wealth creation","financial planning","credit score","debt management","retirement planning","emergency fund","compound interest","market trends","bull market","bear market","market volatility","diversification","blue-chip stocks","dividend investing","value investing","growth investing","day trading","swing trading","long-term investing","short-term trading","cryptocurrency","digital assets","bitcoin","ethereum","blockchain","financial independence","passive income","active income","side hustle","net worth","cash flow","income statement","balance sheet","profit and loss","economic indicators","GDP","unemployment rate","consumer spending","government bonds","corporate bonds","treasury bills","real estate investing","rental income","equity","leverage","hedging","derivatives","futures","options","call option","put option","market psychology","investor sentiment","financial analysis","fundamental analysis","technical analysis","chart patterns","price action","price","candlestick patterns","trendline","support and resistance","breakout","market correction","bubble","recession","economic cycle","monetary policy","fiscal policy","central bank","Federal Reserve","liquidity","market cap","IPO","initial public offering","shareholder value","earnings report","revenue growth","price-to-earnings ratio","dividend yield","return on investment","annual return","market capitalization","financial stability","credit risk","market risk","systematic risk","unsystematic risk","hedge fund","index fund","robo-advisor","brokerage account","financial advisor","wealth management","behavioral finance","economic forecast","inflation hedge","gold investing","forex trading","currency exchange","global economy","market liquidity","fintech","online banking","digital payments","UPI","mobile wallet","asset management","private equity","venture capital","angel investing","market sentiment","economic stimulus","inflation rate","consumer confidence","income tax","capital gains tax","dividend tax","financial regulations","market surveillance","insider trading","blue economy","green investing","sustainable finance","ESG investing","climate finance","financial markets","Wall Street","Nasdaq","New York Stock Exchange","Dow Jones","S&P 500","Nifty 50","Sensex","market depth","liquidity ratio","cash reserves","public sector banks","private sector banks","credit card","loan interest","mortgage","home loan","auto loan","student loan","financial security","insurance","life insurance","health insurance","market cycle","buy and hold","sell-off","market panic","wealth preservation","supply and demand","economic reforms","banking sector","stockbrokers","market participants","regulatory authority","SEBI","corporate governance","economic stability","financial crisis","bankruptcy","margin trading","stop-loss order","limit order","market analysis","capital structure","dividend payout","earnings call","free cash flow","debt-to-equity ratio","stock valuation","asset bubble","financial bubbles","market inefficiency","efficient market hypothesis","financial reporting","global markets","international trade","foreign investment","economic diversification","macroeconomics","microeconomics","financial ecosystems","money supply","velocity of money","currency circulation","market expectations","business cycles","economic slowdown","fiscal deficit","trade deficit","commodity market","oil prices","gold prices","silver prices","hello","hi","hey","greetings","salutations","good morning","good afternoon","good evening","welcome","howdy","namaste","bonjour","hola","ciao","hallo","salaam","shalom","nice to meet you","pleased to meet you","good day","warm regards","kind regards","best regards","respectfully","dear","dearest","hi there","hello there","hey there","long time no see","how have you been","hope you're well","hope you're doing fine","great to see you","good to see you","happy to see you","warm welcome","friendly greetings","cheers","good wishes","sending regards","with regards","greetings and respect","cordial greetings","sincere greetings","hello friend","hi friend","hey friend","welcome back","welcome aboard","pleasant greetings","sunny greetings","joyful greetings","peaceful greetings","warm hello","lovely to meet you","happy morning","happy evening","happy afternoon","greeting of the day","wishing you well","hope you’re great","hope everything’s good","delighted to meet you","honored to meet you","kind greetings","smiling greetings","warmest regards"];
-   
-    const lowerMsg = msg.toLowerCase();
-    return allowedKeywords.some(keyword => lowerMsg.includes(keyword));
-  };
+  useEffect(() => {
+    if (!isOpen) return undefined;
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+        toggleButtonRef.current?.focus();
+      }
+    };
 
-  
-    const userMsg = inputValue.trim();
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  const sendMessage = (message) => {
+    const userText = message.trim();
+    if (!userText || isThinking) return;
+
+    setMessages((current) => [...current, { role: 'user', text: userText }]);
     setInputValue('');
     setIsThinking(true);
 
-    if (!isMentalHealthQuery(userMsg)) {
-        setTimeout(() => {
-            setMessages(prev => [...prev, { role: 'bot', text: "❌ I can only answer questions related to finance and stock related" }]);
-            setIsThinking(false);
-        }, 500);
-        return;
-    }
+    window.setTimeout(() => {
+      setMessages((current) => [
+        ...current,
+        { role: 'assistant', text: getFinancialReply(userText) },
+      ]);
+      setIsThinking(false);
+    }, 250);
+  };
 
-    // API Call
-    try {
-        const API_KEY = ""; 
-        const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
-        
-        const apiResponse = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: userMsg }] }]
-            })
-        });
-        
-        const data = await apiResponse.json();
-        const botResponseText = data.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g, "$1").trim();
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    sendMessage(inputValue);
+  };
 
-        setMessages(prev => [...prev, { role: 'bot', text: botResponseText }]);
-    } catch (error) {
-        setMessages(prev => [...prev, { role: 'bot', text: "Oops! Something went wrong." }]);
-    } finally {
-        setIsThinking(false);
+  const handleInputKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage(inputValue);
     }
   };
 
+  const closeChat = () => {
+    setIsOpen(false);
+    toggleButtonRef.current?.focus();
+  };
+
   return (
-    
-<div className={isOpen ? "chatbot-container show-chatbot" : "chatbot-container"}>
-    
-      <button id="chatbot-toggler" onClick={toggleChatbot}>
-        <span className="material-symbols-rounded">mode_comment</span>
-        <span className="material-symbols-rounded">close</span>
-      </button>
-
-      {/* Chatbot Popup */}
-      <div className="chatbot-popup">
-        <div className="chatbot-header">
-          <div className="header-info">
-             {/* Insert your Logo SVG here or keep it simple */}
-             <svg className="logo" xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 1024 1024"><path d="M738.3 287.6H285.7c-59 0-106.8 47.8-106.8 106.8v303.1c0 59 47.8 106.8 106.8 106.8h81.5v111.1c0 .7.8 1.1 1.4.7l166.9-110.6 41.8-.8h117.4l43.6-.4c59 0 106.8-47.8 106.8-106.8V394.5c0-59-47.8-106.9-106.8-106.9zM351.7 448.2c0-29.5 23.9-53.5 53.5-53.5s53.5 23.9 53.5 53.5-23.9 53.5-53.5 53.5-53.5-23.9-53.5-53.5zm157.9 267.1c-67.8 0-123.8-47.5-132.3-109h264.6c-8.6 61.5-64.5 109-132.3 109zm110-213.7c-29.5 0-53.5-23.9-53.5-53.5s23.9-53.5 53.5-53.5 53.5 23.9 53.5 53.5-23.9 53.5-53.5 53.5zM867.2 644.5V453.1h26.5c19.4 0 35.1 15.7 35.1 35.1v121.1c0 19.4-15.7 35.1-35.1 35.1h-26.5zM95.2 609.4V488.2c0-19.4 15.7-35.1 35.1-35.1h26.5v191.3h-26.5c-19.4 0-35.1-15.7-35.1-35.1zM561.5 149.6c0 23.4-15.6 43.3-36.9 49.7v44.9h-30v-44.9c-21.4-6.5-36.9-26.3-36.9-49.7 0-28.6 23.3-51.9 51.9-51.9s51.9 23.3 51.9 51.9z"></path></svg>
-            <h2 className="logo-text">Chatbot</h2>
+    <div className="chatbot-widget">
+      <section
+        id="chatbot-panel"
+        className="chatbot-panel"
+        aria-label="MoneyMentor financial assistant"
+        hidden={!isOpen}
+      >
+        <header className="chatbot-header">
+          <div className="chatbot-brand">
+            <span className="chatbot-brand-icon" aria-hidden="true">$</span>
+            <div>
+              <h2>MoneyMentor</h2>
+              <p>Financial learning assistant</p>
+            </div>
           </div>
-          <button id="closing" className="material-symbols-rounded" onClick={() => setIsOpen(false)}>keyboard_arrow_down</button>
-        </div>
+          <button
+            type="button"
+            className="chatbot-close"
+            onClick={closeChat}
+            aria-label="Close chat"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </header>
 
-        <div className="chat-body" ref={chatBodyRef}>
-          {messages.map((msg, index) => (
-            <div key={index} className={`message ${msg.role === 'bot' ? 'bot-message' : 'user-message'}`}>
-               {/* Show Bot Icon only for bot messages */}
-               {msg.role === 'bot' && (
-                 <svg className="bot-avatar" xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 1024 1024"><path d="M738.3 287.6H285.7c-59 0-106.8 47.8-106.8 106.8v303.1c0 59 47.8 106.8 106.8 106.8h81.5v111.1c0 .7.8 1.1 1.4.7l166.9-110.6 41.8-.8h117.4l43.6-.4c59 0 106.8-47.8 106.8-106.8V394.5c0-59-47.8-106.9-106.8-106.9z" fill="#213853"/></svg>
-               )}
-               <div className="message-text">{msg.text}</div>
+        <div
+          className="chatbot-messages"
+          ref={chatBodyRef}
+          role="log"
+          aria-label="Chat messages"
+          aria-live="polite"
+          aria-relevant="additions"
+        >
+          {messages.map((message, index) => (
+            <div
+              key={`${message.role}-${index}`}
+              className={`chatbot-message chatbot-message-${message.role}`}
+              aria-label={message.role === 'assistant' ? 'MoneyMentor' : 'You'}
+            >
+              {message.role === 'assistant' && (
+                <span className="chatbot-message-avatar" aria-hidden="true">M</span>
+              )}
+              <p>{message.text}</p>
             </div>
           ))}
 
+          {messages.length === 1 && !isThinking && (
+            <div className="chatbot-prompts" aria-label="Suggested questions">
+              {QUICK_PROMPTS.map((prompt) => (
+                <button
+                  type="button"
+                  key={prompt}
+                  onClick={() => sendMessage(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
+
           {isThinking && (
-             <div className="message bot-message thinking">
-                <div className="message-text">
-                    <div className="thinking-dots">
-                        <span className="dot"></span><span className="dot"></span><span className="dot"></span>
-                    </div>
-                </div>
-             </div>
+            <p className="chatbot-status" role="status">
+              MoneyMentor is preparing a response…
+            </p>
           )}
         </div>
 
-        <div className="chat-footer">
-          <form onSubmit={handleSendMessage} className="chat-form">
-            <textarea 
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Message..." 
-              className="message-input" 
-              required
-            ></textarea>
-            <div className="chat-controls">
-                <button type="submit" id="send" className="material-symbols-rounded">send</button>
-            </div>
-          </form>
-        </div>
-      </div>
+        <form className="chatbot-form" onSubmit={handleSubmit}>
+          <label className="chatbot-sr-only" htmlFor="chatbot-message">
+            Your message
+          </label>
+          <textarea
+            id="chatbot-message"
+            ref={inputRef}
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            onKeyDown={handleInputKeyDown}
+            placeholder="Ask a financial question…"
+            rows={1}
+            maxLength={1000}
+            disabled={isThinking}
+          />
+          <button
+            type="submit"
+            className="chatbot-send"
+            disabled={!inputValue.trim() || isThinking}
+            aria-label="Send message"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" />
+            </svg>
+          </button>
+        </form>
+        <p className="chatbot-disclaimer">
+          Educational information only—not personalized financial advice.
+        </p>
+      </section>
+
+      <button
+        ref={toggleButtonRef}
+        type="button"
+        className="chatbot-toggle"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-label={isOpen ? 'Close MoneyMentor chat' : 'Open MoneyMentor chat'}
+        aria-expanded={isOpen}
+        aria-controls="chatbot-panel"
+      >
+        {isOpen ? (
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m6 6 12 12M18 6 6 18" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z" />
+          </svg>
+        )}
+      </button>
     </div>
   );
-};
+}
 
 export default Chatbot;
