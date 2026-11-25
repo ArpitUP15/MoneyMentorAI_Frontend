@@ -7,60 +7,6 @@ const QUICK_PROMPTS = [
   'How does diversification work?',
 ];
 
-function getFinancialReply(question) {
-  const text = question.toLowerCase();
-
-  if (/^\s*(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(text)) {
-    return 'Hi! I can explain budgeting, saving, investing basics, and common financial terms. What would you like to know?';
-  }
-
-  if (/\b(budget|budgeting|spending|expenses)\b/.test(text)) {
-    return 'Start by listing your monthly take-home income and essential expenses, then set limits for flexible spending and savings. A common starting point is the 50/30/20 guideline, but adjust it to fit your costs and goals.';
-  }
-
-  if (/\b(emergency fund|rainy day)\b/.test(text)) {
-    return 'An emergency fund is money set aside for unexpected costs. Many people work toward three to six months of essential expenses, building it gradually in an accessible, low-risk account.';
-  }
-
-  if (/\b(compound interest|compounding)\b/.test(text)) {
-    return 'Compound growth means returns can earn returns over time. The effect depends on how much you contribute, the rate of return, fees, and time; investment returns are not guaranteed.';
-  }
-
-  if (/\b(diversif|asset allocation|portfolio|risk)\b/.test(text)) {
-    return 'Diversification spreads investments across different assets so one holding has less influence on the overall portfolio. It can reduce some risks, but it cannot prevent losses. The right mix depends on your goals and time horizon.';
-  }
-
-  if (/\b(sip|mutual fund|index fund|etf)\b/.test(text)) {
-    return 'A fund pools money to invest in a group of assets. An SIP is a way to invest a fixed amount at regular intervals. Compare fees, holdings, risks, and the fund documents; neither regular investing nor diversification guarantees a profit.';
-  }
-
-  if (/\b(credit card|credit score|debt|loan|interest rate)\b/.test(text)) {
-    return 'Review the interest rate, fees, minimum payment, and total repayment cost. For multiple debts, keep required payments current and consider directing extra payments toward the highest-rate balance, while keeping enough cash for essential expenses.';
-  }
-
-  if (/\b(retirement|pension)\b/.test(text)) {
-    return 'Retirement planning usually starts with an estimated target date and expenses, then considers regular saving, investment risk, fees, and applicable local tax rules. A qualified adviser can help with your personal circumstances.';
-  }
-
-  if (/\b(crypto|cryptocurrency|bitcoin|ethereum)\b/.test(text)) {
-    return 'Crypto assets can be highly volatile and may lose substantial value. Before considering them, understand custody, fees, fraud risks, and local regulations, and avoid investing money you cannot afford to lose.';
-  }
-
-  if (/\b(price|quote|live market|stock price|share price)\b/.test(text)) {
-    return 'I can explain market terms, but I do not have live price data in this chat. Check the dashboard or your broker for current quotes and verify the market and timestamp.';
-  }
-
-  if (/\b(inflat|saving|save money|savings)\b/.test(text)) {
-    return 'A practical first step is to set a specific savings goal, automate a manageable contribution, and keep short-term funds accessible. Consider how inflation, account fees, and withdrawal rules affect the goal.';
-  }
-
-  if (/\b(invest|stock|share|market)\b/.test(text)) {
-    return 'I can help with investing concepts, but I cannot choose investments for you. Start by clarifying your goal and time horizon, understanding the risks and fees, and comparing diversified options rather than relying on a single stock tip.';
-  }
-
-  return 'I can help explain budgeting, saving, debt, investing basics, diversification, and financial terms. Ask a specific question and I’ll give you an educational overview. I can’t provide personalized financial advice or live market data.';
-}
-
 function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -101,7 +47,7 @@ function Chatbot() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  const sendMessage = (message) => {
+  const sendMessage = async (message) => {
     const userText = message.trim();
     if (!userText || isThinking) return;
 
@@ -109,13 +55,44 @@ function Chatbot() {
     setInputValue('');
     setIsThinking(true);
 
-    window.setTimeout(() => {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            ...messages.slice(-11).map(({ role, text }) => ({ role, text })),
+            { role: 'user', text: userText },
+          ],
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'The assistant is temporarily unavailable. Please try again.');
+      }
+      if (typeof result.reply !== 'string' || !result.reply.trim()) {
+        throw new Error('The assistant returned an invalid response. Please try again.');
+      }
+
       setMessages((current) => [
         ...current,
-        { role: 'assistant', text: getFinancialReply(userText) },
+        { role: 'assistant', text: result.reply },
       ]);
+    } catch (error) {
+      console.error('Chat request failed:', error);
+      setMessages((current) => [
+        ...current,
+        {
+          role: 'assistant',
+          text: error instanceof Error
+            ? error.message
+            : 'Could not reach the assistant. Please check the server and try again.',
+        },
+      ]);
+    } finally {
       setIsThinking(false);
-    }, 250);
+    }
   };
 
   const handleSubmit = (event) => {
