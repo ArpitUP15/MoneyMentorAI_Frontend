@@ -6,7 +6,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-.env.local
+
+# Environment files
+.env
+.env.*
+!.env.example
+
 node_modules
 dist
 dist-ssr
@@ -14,7 +19,6 @@ dist-ssr
 
 # Editor directories and files
 .vscode/*
-.env
 !.vscode/extensions.json
 .idea
 .DS_Store
