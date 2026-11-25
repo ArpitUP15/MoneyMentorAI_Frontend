@@ -66,10 +66,26 @@ function Chatbot() {
           ],
         }),
       });
-      const result = await response.json();
+      const responseText = await response.text();
+      let result;
 
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        throw new Error(
+          response.ok
+            ? 'The chat service returned an unreadable response. Please try again.'
+            : `Chat service error (${response.status}). Check that the chat server is running and your Groq settings are correct.`,
+        );
+      }
+
+      if (!result || typeof result !== 'object') {
+        throw new Error('The chat service returned an invalid response. Please try again.');
+      }
       if (!response.ok) {
-        throw new Error(result.error || 'The assistant is temporarily unavailable. Please try again.');
+        throw new Error(
+          result.error || `Chat service error (${response.status}). Please try again.`,
+        );
       }
       if (typeof result.reply !== 'string' || !result.reply.trim()) {
         throw new Error('The assistant returned an invalid response. Please try again.');
@@ -85,9 +101,11 @@ function Chatbot() {
         ...current,
         {
           role: 'assistant',
-          text: error instanceof Error
-            ? error.message
-            : 'Could not reach the assistant. Please check the server and try again.',
+          text: error instanceof TypeError
+            ? 'Could not connect to the chat server. Start it with `npm run server` and try again.'
+            : error instanceof Error
+              ? error.message
+              : 'Could not reach the assistant. Please check the server and try again.',
         },
       ]);
     } finally {

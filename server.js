@@ -19,6 +19,9 @@ app.use('/api/chat', rateLimit({
   limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({ error: 'Too many chat requests. Please wait a moment and try again.' });
+  },
 }));
 
 app.post('/api/chat', async (req, res) => {
